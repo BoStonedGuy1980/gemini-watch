@@ -43,7 +43,8 @@ jobs:
       - name: Package App into Payload ZIP
         run: |
           mkdir -p Payload
-          cp -r "build_output/gemini-watch Watch App.app" Payload/
+          # Find the built .app file recursively inside build_output and copy it
+          find build_output -name "*.app" -maxdepth 3 -exec cp -r {} Payload/ \;
           zip -r gemini-watch.ipa Payload/
 
       - name: Upload IPA Artifact
