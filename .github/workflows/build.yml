@@ -38,13 +38,14 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CONFIGURATION_BUILD_DIR=build_output
+            derivedDataPath "$PWD/derivedData"
 
       - name: Package App into Payload ZIP
         run: |
           mkdir -p Payload
-          # Find the built .app file recursively inside build_output and copy it
-          find build_output -name "*.app" -maxdepth 3 -exec cp -r {} Payload/ \;
+          # Locate the .app bundle inside DerivedData and copy it
+          find derivedData -name "*.app" -type d -maxdepth 6 -exec cp -r {} Payload/ \;
+          ls -la Payload/
           zip -r gemini-watch.ipa Payload/
 
       - name: Upload IPA Artifact
