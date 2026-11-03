@@ -11,19 +11,24 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v4
 
-      - name: Select Latest Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+      - name: Select Xcode 16.2
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+          xcodebuild -version
 
       - name: Inject Gemini API Key
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          mkdir -p "gemini-watch/gemini-watch Watch App"
-          cat << 'EOF' > "gemini-watch/gemini-watch Watch App/Secrets.plist"
+          TARGET_DIR="gemini-watch/gemini-watch Watch App"
+          mkdir -p "$TARGET_DIR"
+          cat << EOF > "$TARGET_DIR/Secrets.plist"
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
               <key>GEMINI_API_KEY</key>
-              <string>${{ secrets.GEMINI_API_KEY }}</string>
+              <string>$GEMINI_API_KEY</string>
           </dict>
           </plist>
           EOF
@@ -35,17 +40,26 @@ jobs:
             -scheme "gemini-watch Watch App" \
             -destination "generic/platform=watchOS" \
             -configuration Release \
+            -derivedDataPath "$PWD/derivedData" \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            derivedDataPath "$PWD/derivedData"
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_STYLE="Manual"
 
       - name: Package App into Payload ZIP
         run: |
           mkdir -p Payload
-          # Locate the .app bundle inside DerivedData and copy it
-          find derivedData -name "*.app" -type d -maxdepth 6 -exec cp -r {} Payload/ \;
-          ls -la Payload/
+          # Locate the .app bundle in the release products directory
+          APP_PATH=$(find derivedData/Build/Products/Release-watchos -maxdepth 1 -name "*.app" | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: No .app bundle found in build products!"
+            exit 1
+          fi
+          cp -R "$APP_PATH" Payload/
+
+          # Guarantee Secrets.plist exists inside the app bundle
+          cp "gemini-watch/gemini-watch Watch App/Secrets.plist" Payload/*.app/
+
           zip -r gemini-watch.ipa Payload/
 
       - name: Upload IPA Artifact
