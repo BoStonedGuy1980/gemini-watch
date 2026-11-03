@@ -1,0 +1,52 @@
+name: Build Gemini Watch
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Select Xcode Version
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+
+      - name: Inject Gemini API Key
+        run: |
+          cat << 'EOF' > "gemini-watch Watch App/Secrets.plist"
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>GEMINI_API_KEY</key>
+              <string>${{ secrets.GEMINI_API_KEY }}</string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Build unsigned .app
+        run: |
+          xcodebuild clean build \
+            -project "gemini-watch/gemini-watch.xcodeproj" \
+            -scheme "gemini-watch Watch App" \
+            -destination "generic/platform=watchOS" \
+            -configuration Release \
+            -CODE_SIGNING_ALLOWED=NO \
+            -CODE_SIGN_IDENTITY="" \
+            -CODE_SIGNING_REQUIRED=NO \
+            -CONFIGURATION_BUILD_DIR=build_output
+
+      - name: Package App into Payload ZIP
+        run: |
+          mkdir -p Payload
+          cp -r "build_output/gemini-watch Watch App.app" Payload/
+          zip -r gemini-watch.ipa Payload/
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-watch-ipa
+          path: gemini-watch.ipa
