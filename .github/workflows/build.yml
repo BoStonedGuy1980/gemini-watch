@@ -11,12 +11,10 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v4
 
-      - name: Select Xcode Version
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
-
       - name: Inject Gemini API Key
         run: |
-          cat << 'EOF' > "gemini-watch Watch App/Secrets.plist"
+          mkdir -p "gemini-watch/gemini-watch Watch App"
+          cat << 'EOF' > "gemini-watch/gemini-watch Watch App/Secrets.plist"
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -34,10 +32,10 @@ jobs:
             -scheme "gemini-watch Watch App" \
             -destination "generic/platform=watchOS" \
             -configuration Release \
-            -CODE_SIGNING_ALLOWED=NO \
-            -CODE_SIGN_IDENTITY="" \
-            -CODE_SIGNING_REQUIRED=NO \
-            -CONFIGURATION_BUILD_DIR=build_output
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CONFIGURATION_BUILD_DIR=build_output
 
       - name: Package App into Payload ZIP
         run: |
